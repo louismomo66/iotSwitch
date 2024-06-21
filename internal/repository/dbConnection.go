@@ -1,0 +1,32 @@
+package repository
+
+import (
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"iot_switch/iotSwitchApp/internal/config"
+	"iot_switch/iotSwitchApp/internal/models"
+	"log"
+)
+
+func ConnectDB() (*gorm.DB, error) {
+	conf := config.LoadConfig()
+	dbURL := "host=" + conf.DBHost + " user=" + conf.DBUser + " password=" + conf.DBPassword + " dbname=" + conf.DBName + " port=" + conf.DBPort + " sslmode=disable"
+
+	conn, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dbURL,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+		return nil, err // This line will not be reached because log.Fatalf exits the program
+	}
+
+	// Auto-migrate models
+	err = conn.AutoMigrate(&models.User{})
+	if err != nil {
+		log.Printf("Failed to auto-migrate: %v", err)
+		return conn, err
+	}
+
+	return conn, nil
+}
