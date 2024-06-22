@@ -15,10 +15,10 @@ func SetupRoutes(r *mux.Router, authHandler *handler.AuthHandler, jwtSecret stri
 
 	// r.Use(middleware.JWTMiddleware(jwtSecret))
 	r.HandleFunc("/auth/google/login", handler.HandleGoogleLogin).Methods("GET")
-	r.HandleFunc("/auth/google/callback", handler.HandleGoogleCallback).Methods("GET")
+	r.HandleFunc("/auth/google/callback",  authHandler.HandleGoogleCallback).Methods("GET")
 	r.HandleFunc("/auth/facebook/login", handler.HandleFacebookLogin).Methods("GET")
-	r.HandleFunc("/auth/facebook/callback", handler.HandleFacebookCallback).Methods("GET")
-	r.HandleFunc("/auth/apple/login", handler.HandleAppleLogin).Methods("GET")
-	r.HandleFunc("/auth/apple/callback", handler.HandleAppleCallback).Methods("GET")
+	r.HandleFunc("/auth/facebook/callback",  authHandler.HandleFacebookCallback).Methods("GET")
+	// r.HandleFunc("/auth/apple/login", handler.HandleAppleLogin).Methods("GET")
+	// r.HandleFunc("/auth/apple/callback", handler.HandleAppleCallback).Methods("GET")
 
 }

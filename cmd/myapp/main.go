@@ -15,12 +15,14 @@ import (
 )
 
 func main() {
+	
 	cfg := config.LoadConfig()
 	db, err := repository.ConnectDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	userRepository := repository.NewUserRepository(db)
+	handler.InitOAuth( )
 	otpManager := utils.NewOTPManager()
 	authService := service.NewAuthService(userRepository, cfg.JWTSecret, otpManager)
 	authHandler := handler.NewAuthHandler(authService, userRepository)
