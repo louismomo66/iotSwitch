@@ -26,10 +26,9 @@ func main() {
 	otpManager := utils.NewOTPManager()
 	authService := service.NewAuthService(userRepository, cfg.JWTSecret, otpManager)
 	authHandler := handler.NewAuthHandler(authService, userRepository)
-
+	scheduleHandler := &handler.Schedulehundler{DB: db}
 	r := mux.NewRouter()
-	routes.SetupRoutes(r, authHandler, cfg.JWTSecret)
-
+	routes.SetupRoutes(r, authHandler, cfg.JWTSecret,scheduleHandler)
 	if err := http.ListenAndServe(":9000",
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
