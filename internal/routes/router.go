@@ -2,12 +2,11 @@ package routes
 
 import (
 	"iot_switch/iotSwitchApp/internal/handler"
-	midelware "iot_switch/iotSwitchApp/internal/middleware"
 
 	"github.com/gorilla/mux"
 )
 
-func SetupRoutes(r *mux.Router, authHandler *handler.AuthHandler, jwtSecret string,scheduleHandler *handler.Schedulehundler) {
+func SetupRoutes(r *mux.Router, authHandler *handler.AuthHandler, jwtSecret string,scheduleHandler *handler.ScheduleHandler, esp32Handler *handler.DeviceController) {
 	r.HandleFunc("/signup", authHandler.SignUp).Methods("POST")
 	r.HandleFunc("/login", authHandler.Login).Methods("POST")
 	r.HandleFunc("/forgot-password", authHandler.ForgotPassword).Methods("POST")
@@ -22,11 +21,19 @@ func SetupRoutes(r *mux.Router, authHandler *handler.AuthHandler, jwtSecret stri
 	// r.HandleFunc("/auth/apple/callback", handler.HandleAppleCallback).Methods("GET")
 
 
-	r.HandleFunc("/schedules", midelware.IsAuthorized(scheduleHandler.CreateSchedule)).Methods("POST")
-	r.HandleFunc("/schedules/{id}", midelware.IsAuthorized(scheduleHandler.UpdateSchedule)).Methods("PUT")
-	r.HandleFunc("/schedules/{id}", midelware.IsAuthorized(scheduleHandler.DeleteSchedule)).Methods("DELETE")
-	r.HandleFunc("/schedules/{id}/activate", midelware.IsAuthorized(scheduleHandler.ActivateSchedule)).Methods("POST")
-	r.HandleFunc("/schedules/{id}/deactivate", midelware.IsAuthorized(scheduleHandler.DeactivateSchedule)).Methods("POST")
+	// r.HandleFunc("/schedules", midelware.IsAuthorized(scheduleHandler.CreateSchedule)).Methods("POST")
+	r.HandleFunc("/schedules", scheduleHandler.CreateSchedule).Methods("POST")
+	r.HandleFunc("/schedules/{id}", scheduleHandler.UpdateSchedule).Methods("PUT")
+	r.HandleFunc("/schedules/{id}", scheduleHandler.DeleteSchedule).Methods("DELETE")
+	r.HandleFunc("/schedules/{id}/activate", scheduleHandler.ActivateSchedule).Methods("POST")
+	r.HandleFunc("/schedules/{id}/deactivate", scheduleHandler.DeactivateSchedule).Methods("POST")
+	r.HandleFunc("/relay-states/{esp32_id}", scheduleHandler.GetRelayStates).Methods("GET")
+	r.HandleFunc("/schedules", scheduleHandler.GetAllSchedules).Methods("GET")
+
+	r.HandleFunc("/register-esp32", esp32Handler.RegisterDevice).Methods("POST")
+	r.HandleFunc("/devices", esp32Handler.GetAllDevices).Methods("Get")
+	r.HandleFunc("/relay", esp32Handler.SetRelayState).Methods("POST")
+	r.HandleFunc("/devices/{esp32_id}/relays", esp32Handler.GetRelaysByESP32ID).Methods("GET")
 
 	
 }

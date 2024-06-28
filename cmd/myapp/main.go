@@ -22,13 +22,19 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	userRepository := repository.NewUserRepository(db)
+	deviceRepo := repository.NewDeviceRepository(db)
+	deviceHandler := handler.NewDeviceController(deviceRepo)
 	handler.InitOAuth( )
 	otpManager := utils.NewOTPManager()
 	authService := service.NewAuthService(userRepository, cfg.JWTSecret, otpManager)
 	authHandler := handler.NewAuthHandler(authService, userRepository)
-	scheduleHandler := &handler.Schedulehundler{DB: db}
+	scheduleHandler := &handler.ScheduleHandler{DB: db}
+
+	scheduleChecker := &service.ScheduleChecker{DB: db}
+	go scheduleChecker.StartScheduleChecker()
+
 	r := mux.NewRouter()
-	routes.SetupRoutes(r, authHandler, cfg.JWTSecret,scheduleHandler)
+	routes.SetupRoutes(r, authHandler, cfg.JWTSecret,scheduleHandler,deviceHandler)
 	if err := http.ListenAndServe(":9000",
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),

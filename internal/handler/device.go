@@ -1,0 +1,188 @@
+package handler
+
+import (
+	"encoding/json"
+	"iot_switch/iotSwitchApp/internal/models"
+	"iot_switch/iotSwitchApp/internal/repository"
+	"iot_switch/iotSwitchApp/internal/utils"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/gorilla/mux"
+	"gorm.io/gorm"
+)
+
+type DeviceController struct {
+	Repo repository.DeviceRepository
+}
+
+func NewDeviceController(repo repository.DeviceRepository) *DeviceController {
+	return &DeviceController{Repo: repo}
+}
+
+func (d *DeviceController) RegisterDevice(w http.ResponseWriter, r *http.Request) {
+	// log.Println("Trying to register")
+	// requestBody, _ := ioutil.ReadAll(r.Body)
+    //     defer r.Body.Close()
+    //     log.Printf("Failed to decode. Request body: %s\n", requestBody)
+
+    var device models.Device
+    if err := json.NewDecoder(r.Body).Decode(&device); err != nil {
+		
+        utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
+        return
+    }
+
+    existingDevice, err := d.Repo.GetDeviceByESP32ID(device.ESP32ID)
+    if err != nil {
+        if err.Error() == "record not found" {
+            if err := d.Repo.CreateDevice(&device); err != nil {
+				log.Println("Failed to register")
+                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to register ESP32")
+                return
+            }
+            w.Header().Set("Content-Type", "application/json")
+            json.NewEncoder(w).Encode(device)
+            return
+        } else {
+			log.Println("Table error")
+            utils.WriteJSONError(w, http.StatusInternalServerError, err, "Device table error")
+            return
+        }
+    }
+
+    existingDevice.NumRelays = device.NumRelays
+
+    for _, relay := range device.Relays {
+        existingRelay, err := d.Repo.GetRelayByESP32IDAndPin(device.ESP32ID, relay.Pin)
+        if err != nil {
+            if err.Error() == "record not found" {
+                existingDevice.Relays = append(existingDevice.Relays, relay)
+            } else {
+                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch existing relays")
+                return
+            }
+        } else {
+            existingRelay.State = relay.State
+            if err := d.Repo.UpdateRelayState(existingRelay); err != nil {
+                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay")
+                return
+            }
+        }
+    }
+
+    if err := d.Repo.UpdateDevice(existingDevice); err != nil {
+        utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update ESP32")
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(existingDevice)
+}
+
+func (d *DeviceController) SetRelayState(w http.ResponseWriter, r *http.Request) {
+	var relayState models.Relay
+	if err := json.NewDecoder(r.Body).Decode(&relayState); err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
+		return
+	}
+
+	if err := d.Repo.UpdateRelayState(&relayState); err != nil {
+		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay state")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(relayState)
+}
+
+type RelayStates struct {
+	Relays map[int]bool `json:"relays"`
+}
+
+func (h *ScheduleHandler) GetRelayStates(w http.ResponseWriter, r *http.Request) {
+	esp32ID := mux.Vars(r)["esp32_id"]
+
+	var device models.Device
+	if err := h.DB.Preload("Relays").Where("esp32_id = ?", esp32ID).First(&device).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			utils.WriteJSONError(w, http.StatusNotFound, err, "Device not found")
+		} else {
+			utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error fetching device")
+		}
+		return
+	}
+
+	var schedules []models.Schedule
+	if err := h.DB.Where("relay_id IN ?", getRelayIDs(device.Relays)).Find(&schedules).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error fetching schedules")
+		return
+	}
+
+	relayStates := make(map[int]bool)
+	now := time.Now()
+
+	// Initialize relayStates map with only pins
+	for _, relay := range device.Relays {
+		relayStates[relay.Pin] = false // Initialize all pins as off by default
+	}
+
+	// Update states based on active schedules
+	for _, schedule := range schedules {
+		if schedule.Active {
+			start := schedule.StartTime
+			end := start.Add(time.Duration(schedule.Duration) * time.Second)
+			if now.After(start) && now.Before(end) {
+				// Set the pin state to true if the schedule is active
+				// Check if the schedule's relay is in device's relays
+				for _, relay := range device.Relays {
+					if relay.ID == schedule.RelayID {
+						relayStates[relay.Pin] = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(relayStates)
+}
+
+
+func getRelayIDs(relays []models.Relay) []int {
+	var ids []int
+	for _, relay := range relays {
+		ids = append(ids, relay.ID)
+	}
+	return ids
+}
+
+func (d *DeviceController) GetAllDevices(w http.ResponseWriter, r *http.Request) {
+	devices, err := d.Repo.GetAllDevices()
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch devices")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(devices)
+}
+func (d *DeviceController) GetRelaysByESP32ID(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    esp32ID := vars["esp32_id"]
+
+    device, err := d.Repo.GetRelayByESP32ID(esp32ID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            utils.WriteJSONError(w, http.StatusNotFound, err, "Device not found")
+        } else {
+            utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error fetching device")
+        }
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(device.Relays)
+}

@@ -6,23 +6,31 @@ import (
 	"iot_switch/iotSwitchApp/internal/utils"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
-type Schedulehundler struct{
-DB *gorm.DB
+type ScheduleHandler struct {
+	DB *gorm.DB
 }
 
-func (h *Schedulehundler)CreateSchedule(w http.ResponseWriter,r *http.Request){
+func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request) {
 	var schedule models.Schedule
-	if err := json.NewDecoder(r.Body).Decode(&schedule); err != nil{
+	if err := json.NewDecoder(r.Body).Decode(&schedule); err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
 		return
 	}
 
-	if err := h.DB.Create(&schedule).Error;err != nil{
+	// Ensure the relay exists
+	var relay models.Relay
+	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
+		return
+	}
+
+	if err := h.DB.Create(&schedule).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to create schedule")
 		return
 	}
@@ -31,7 +39,7 @@ func (h *Schedulehundler)CreateSchedule(w http.ResponseWriter,r *http.Request){
 	json.NewEncoder(w).Encode(schedule)
 }
 
-func (h *Schedulehundler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
+func (h *ScheduleHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -50,6 +58,13 @@ func (h *Schedulehundler) UpdateSchedule(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Ensure the relay exists
+	var relay models.Relay
+	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
+		return
+	}
+
 	if err := h.DB.Save(&schedule).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update schedule")
 		return
@@ -59,14 +74,18 @@ func (h *Schedulehundler) UpdateSchedule(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(schedule)
 }
 
-func (h *Schedulehundler) DeleteSchedule(w http.ResponseWriter, r *http.Request) {
+func (h *ScheduleHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid schedule ID")
 		return
 	}
-
+	var schedule models.Schedule
+	if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
+		return
+	}
 	if err := h.DB.Delete(&models.Schedule{}, scheduleID).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to delete schedule")
 		return
@@ -75,7 +94,7 @@ func (h *Schedulehundler) DeleteSchedule(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Schedulehundler) ActivateSchedule(w http.ResponseWriter, r *http.Request) {
+func (h *ScheduleHandler) ActivateSchedule(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -86,6 +105,13 @@ func (h *Schedulehundler) ActivateSchedule(w http.ResponseWriter, r *http.Reques
 	var schedule models.Schedule
 	if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
+		return
+	}
+
+	// Ensure the relay exists
+	var relay models.Relay
+	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
 		return
 	}
 
@@ -96,12 +122,36 @@ func (h *Schedulehundler) ActivateSchedule(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Check if the schedule start time is in the future
+	now := time.Now()
+	if schedule.StartTime.After(now) {
+		// Schedule the relay state change when the schedule starts
+		time.AfterFunc(schedule.StartTime.Sub(now), func() {
+			relay.State = "on"
+			h.DB.Save(&relay)
+			// Schedule the relay state reset after the schedule duration
+			time.AfterFunc(time.Duration(schedule.Duration)*time.Second, func() {
+				relay.State = "off"
+				h.DB.Save(&relay)
+			})
+		})
+	} else {
+		// Schedule the relay state change immediately
+		relay.State = "on"
+		h.DB.Save(&relay)
+		// Schedule the relay state reset after the schedule duration
+		time.AfterFunc(time.Duration(schedule.Duration)*time.Second, func() {
+			relay.State = "off"
+			h.DB.Save(&relay)
+		})
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(schedule)
 }
 
 
-func (h *Schedulehundler) DeactivateSchedule(w http.ResponseWriter, r *http.Request) {
+func (h *ScheduleHandler) DeactivateSchedule(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -112,6 +162,13 @@ func (h *Schedulehundler) DeactivateSchedule(w http.ResponseWriter, r *http.Requ
 	var schedule models.Schedule
 	if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
+		return
+	}
+
+	// Ensure the relay exists
+	var relay models.Relay
+	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
 		return
 	}
 
@@ -124,4 +181,16 @@ func (h *Schedulehundler) DeactivateSchedule(w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(schedule)
+}
+
+func (h *ScheduleHandler) GetAllSchedules(w http.ResponseWriter, r *http.Request) {
+	var schedules []models.Schedule
+
+	if err := h.DB.Find(&schedules).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch schedules")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(schedules)
 }

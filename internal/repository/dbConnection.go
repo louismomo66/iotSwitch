@@ -1,11 +1,12 @@
 package repository
 
 import (
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"iot_switch/iotSwitchApp/internal/config"
 	"iot_switch/iotSwitchApp/internal/models"
 	"log"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func ConnectDB() (*gorm.DB, error) {
@@ -22,7 +23,7 @@ func ConnectDB() (*gorm.DB, error) {
 	}
 
 	// Auto-migrate models
-	err = conn.AutoMigrate(&models.User{})
+	err = conn.AutoMigrate(&models.User{},&models.Device{},&models.Relay{},&models.Schedule{})
 	if err != nil {
 		log.Printf("Failed to auto-migrate: %v", err)
 		return conn, err
