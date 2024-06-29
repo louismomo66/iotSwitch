@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"errors"
 	"iot_switch/iotSwitchApp/internal/models"
-	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -14,7 +12,7 @@ type DeviceRepository interface {
 	CreateDevice(device *models.Device) error
 	UpdateDevice(device *models.Device) error
 	GetAllDevices() ([]models.Device, error)
-	DeleteDevice(id string) error
+	DeleteDeviceByESP32ID(esp32ID string) error
 	UpdateRelayState(relay *models.Relay) error
 	GetRelayState(relayID uint) string 
 	GetDeviceByESP32ID(esp32ID string) (*models.Device, error)
@@ -50,21 +48,8 @@ func (repo *GormDeviceRepo) GetAllDevices() ([]models.Device, error) {
 	return devices, err
 }
 
-func (repo *GormDeviceRepo) DeleteDevice(id string) error {
-	result := repo.db.Where("esp32_id = ?", id).Delete(&models.Device{})
-
-	if result.Error != nil {
-		log.Printf("Failed to delete device with Id %s: %v", id, result.Error)
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		log.Printf("No device found with id %s", id)
-		return errors.New("no device found")
-	}
-
-	log.Printf("Device with Id %s deleted successfully. Rows affected: %d", id, result.RowsAffected)
-	return nil
+func (repo *GormDeviceRepo) DeleteDeviceByESP32ID(esp32ID string) error {
+    return repo.db.Where("esp32_id = ?", esp32ID).Delete(&models.Device{}).Error
 }
 func (repo *GormDeviceRepo) UpdateRelayState(relay *models.Relay) error {
 	return repo.db.Model(&models.Relay{}).Where("id = ?", relay.ID).Update("state", relay.State).Error

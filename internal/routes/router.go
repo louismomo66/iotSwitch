@@ -2,6 +2,7 @@ package routes
 
 import (
 	"iot_switch/iotSwitchApp/internal/handler"
+	midelware "iot_switch/iotSwitchApp/internal/middleware"
 
 	"github.com/gorilla/mux"
 )
@@ -32,8 +33,10 @@ func SetupRoutes(r *mux.Router, authHandler *handler.AuthHandler, jwtSecret stri
 
 	r.HandleFunc("/register-esp32", esp32Handler.RegisterDevice).Methods("POST")
 	r.HandleFunc("/devices", esp32Handler.GetAllDevices).Methods("Get")
-	r.HandleFunc("/relay", esp32Handler.SetRelayState).Methods("POST")
+	r.HandleFunc("/devices/set-relay", esp32Handler.SetRelayState).Methods("POST")
 	r.HandleFunc("/devices/{esp32_id}/relays", esp32Handler.GetRelaysByESP32ID).Methods("GET")
+	r.HandleFunc("/devices/{esp32_id}", midelware.IsAuthorized(esp32Handler.DeleteDevice)).Methods("DELETE")
+
 
 	
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"iot_switch/iotSwitchApp/internal/models"
 	"iot_switch/iotSwitchApp/internal/repository"
 	"iot_switch/iotSwitchApp/internal/utils"
@@ -82,20 +83,54 @@ func (d *DeviceController) RegisterDevice(w http.ResponseWriter, r *http.Request
 }
 
 func (d *DeviceController) SetRelayState(w http.ResponseWriter, r *http.Request) {
-	var relayState models.Relay
-	if err := json.NewDecoder(r.Body).Decode(&relayState); err != nil {
-		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
-		return
-	}
+    var req struct {
+        ESP32ID string `json:"esp32_id"`
+        Pin     int    `json:"pin"`
+        State   bool   `json:"state"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
+        return
+    }
 
-	if err := d.Repo.UpdateRelayState(&relayState); err != nil {
-		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay state")
-		return
-	}
+    device, err := d.Repo.GetDeviceByESP32ID(req.ESP32ID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            utils.WriteJSONError(w, http.StatusNotFound, err, "Device not found")
+        } else {
+            utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error fetching device")
+        }
+        return
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(relayState)
+    var relay *models.Relay
+    for _, r := range device.Relays {
+        if r.Pin == req.Pin {
+            relay = &r
+            break
+        }
+    }
+
+    if relay == nil {
+        utils.WriteJSONError(w, http.StatusNotFound, errors.New("relay not found"), "relay not found")
+        return
+    }
+
+    relay.State = "off"
+    if req.State {
+        relay.State = "on"
+    }
+
+    if err := d.Repo.UpdateRelayState(relay); err != nil {
+        utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay state")
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(relay)
 }
+
+
 
 type RelayStates struct {
 	Relays map[int]bool `json:"relays"`
@@ -169,6 +204,10 @@ func (d *DeviceController) GetAllDevices(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(devices)
 }
+
+
+
+
 func (d *DeviceController) GetRelaysByESP32ID(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     esp32ID := vars["esp32_id"]
@@ -185,4 +224,23 @@ func (d *DeviceController) GetRelaysByESP32ID(w http.ResponseWriter, r *http.Req
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(device.Relays)
+}
+
+func (d *DeviceController) DeleteDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Role") != "admin" {
+		w.Write([]byte("Not authorized."))
+		return
+	}  
+	esp32ID := mux.Vars(r)["esp32_id"]
+
+    if err := d.Repo.DeleteDeviceByESP32ID(esp32ID); err != nil {
+        if err == gorm.ErrRecordNotFound {
+            utils.WriteJSONError(w, http.StatusNotFound, err, "Device not found")
+        } else {
+            utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error deleting device")
+        }
+        return
+    }
+
+    w.WriteHeader(http.StatusNoContent)
 }

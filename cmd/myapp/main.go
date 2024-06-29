@@ -3,44 +3,54 @@ package main
 import (
 	"iot_switch/iotSwitchApp/internal/config"
 	"iot_switch/iotSwitchApp/internal/handler"
+	midelware "iot_switch/iotSwitchApp/internal/middleware"
 	"iot_switch/iotSwitchApp/internal/repository"
 	"iot_switch/iotSwitchApp/internal/routes"
 	"iot_switch/iotSwitchApp/internal/service"
 	"iot_switch/iotSwitchApp/internal/utils"
-	"log"
 	"net/http"
+	"os"
 
+	"github.com/go-kit/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
 	
 	cfg := config.LoadConfig()
 	db, err := repository.ConnectDB()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Log("msg", "Failed to start server", "err", err)
+			os.Exit(1)
 	}
 	userRepository := repository.NewUserRepository(db)
 	deviceRepo := repository.NewDeviceRepository(db)
 	deviceHandler := handler.NewDeviceController(deviceRepo)
 	handler.InitOAuth( )
 	otpManager := utils.NewOTPManager()
-	authService := service.NewAuthService(userRepository, cfg.JWTSecret, otpManager)
+	authService := service.NewAuthService(userRepository, otpManager)
 	authHandler := handler.NewAuthHandler(authService, userRepository)
 	scheduleHandler := &handler.ScheduleHandler{DB: db}
 
 	scheduleChecker := &service.ScheduleChecker{DB: db}
 	go scheduleChecker.StartScheduleChecker()
 
+	
 	r := mux.NewRouter()
 	routes.SetupRoutes(r, authHandler, cfg.JWTSecret,scheduleHandler,deviceHandler)
+	// Wrap the router with the LoggingMiddleware
+	loggedRouter := midelware.LoggingMiddleware(logger)(r)
+
 	if err := http.ListenAndServe(":9000",
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
 			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 			handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
-		)(r)); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		)(loggedRouter)); err != nil {
+			logger.Log("msg", "Failed to start server", "err", err)
+			os.Exit(1)
 	}
 }

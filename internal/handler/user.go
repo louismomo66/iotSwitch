@@ -2,9 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"iot_switch/iotSwitchApp/internal/models"
 	"iot_switch/iotSwitchApp/internal/utils"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -13,7 +16,16 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request")
 		return
 	}
-
+	email, err := h.userRepository.GetUserEmail(user.Email);
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		utils.WriteJSONError(w, http.StatusInternalServerError,  err,"error checking email")
+		return
+	}
+	
+	if email != "" {
+		utils.WriteJSONError(w, http.StatusConflict, nil,"email already in use")
+		return
+	}
 	if err := h.authService.SignUp(&user); err != nil {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Failed to create ")
 		return
@@ -33,14 +45,29 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request")
 		return
 	}
+	user, err := h.userRepository.GetUserByEmail(request.Email)
+	if err != nil {
+		utils.WriteJSONError(w,http.StatusBadRequest,err,"username or password is incorrect")
+		return 
+	}
+	check := utils.CheckPasswordHash(request.Password, user.Password)
 
-	token, err := h.authService.Login(request.Email, request.Password)
+	if !check {
+		utils.WriteJSONError(w,http.StatusBadRequest,err,"username or password is incorrect")
+		return 
+	}
+
+	validtoken, err := utils.GenerateJWT(user.Email, user.Role)
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusUnauthorized, nil, "Incorect Email or password")
 		return
 	}
-
-	response := map[string]string{"token": token}
+token := models.Token{
+Email: user.Email,
+Role: user.Role,
+TokenString: validtoken,
+}
+	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(token)
 }
