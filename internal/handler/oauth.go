@@ -27,7 +27,7 @@ func InitOAuth() {
 		RedirectURL:  "http://localhost:9000/auth/google/callback",
 		ClientID:     conf.GOOGLE_CLIENT_ID,
 		ClientSecret: conf.GOOGLE_CLIENT_SECRET,
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email","https://www.googleapis.com/auth/userinfo.profile"},
 		Endpoint:     google.Endpoint,
 	}
 	facebookOAuthConfig = &oauth2.Config{
