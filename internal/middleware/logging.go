@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	log "github.com/go-kit/kit/log"
+	log "github.com/go-kit/log"
 )
 
 type responseWriter struct {

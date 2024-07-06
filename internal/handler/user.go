@@ -16,6 +16,10 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request")
 		return
 	}
+	if user.FirstName == "" || user.SecondName == "" || user.Password == "" || user.Email == ""  {
+		utils.WriteJSONError(w, http.StatusBadRequest,  nil,"Please provide all required fields: name, email, password, role")
+		return
+	}
 	email, err := h.userRepository.GetUserEmail(user.Email);
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.WriteJSONError(w, http.StatusInternalServerError,  err,"error checking email")
