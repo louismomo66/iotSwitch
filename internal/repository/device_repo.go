@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"iot_switch/iotSwitchApp/internal/models"
+	"iot_switch/internal/models"
 	"time"
 
 	"gorm.io/gorm"

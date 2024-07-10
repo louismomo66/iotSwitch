@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"iot_switch/iotSwitchApp/internal/models"
-	"iot_switch/iotSwitchApp/internal/repository"
-	"iot_switch/iotSwitchApp/internal/service"
+	"iot_switch/internal/models"
+	"iot_switch/internal/repository"
+	"iot_switch/internal/service"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

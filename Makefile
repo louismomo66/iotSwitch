@@ -17,7 +17,7 @@ all: build
 
 # Build the binary
 build:
-	$(GO_BUILD) -o $(BINARY_NAME) ./cmd/myapp
+	$(GO_BUILD) -buildvcs=false -o $(BINARY_NAME) ./cmd/myapp
 
 # Run the binary
 run: build

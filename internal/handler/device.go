@@ -3,9 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"iot_switch/iotSwitchApp/internal/models"
-	"iot_switch/iotSwitchApp/internal/repository"
-	"iot_switch/iotSwitchApp/internal/utils"
+	"iot_switch/internal/models"
+	"iot_switch/internal/repository"
+	"iot_switch/internal/utils"
 	"log"
 	"net/http"
 	"time"

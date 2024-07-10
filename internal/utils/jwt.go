@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"iot_switch/iotSwitchApp/internal/config"
+	"iot_switch/internal/config"
 	"os"
 	"time"
 

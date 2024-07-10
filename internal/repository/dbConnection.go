@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"iot_switch/iotSwitchApp/internal/config"
-	"iot_switch/iotSwitchApp/internal/models"
+	"iot_switch/internal/config"
+	"iot_switch/internal/models"
 	"log"
 
 	"gorm.io/driver/postgres"
@@ -11,7 +11,7 @@ import (
 
 func ConnectDB() (*gorm.DB, error) {
 	conf := config.LoadConfig()
-	dbURL := "host=" + conf.DBHost + " user=" + conf.DBUser + " password=" + conf.DBPassword + " dbname=" + conf.DBName + " port=" + conf.DBPort + " sslmode=required"
+	dbURL := "host=" + conf.DBHost + " user=" + conf.DBUser + " password=" + conf.DBPassword + " dbname=" + conf.DBName + " port=" + conf.DBPort + " sslmode=disable"
 
 	conn, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dbURL,

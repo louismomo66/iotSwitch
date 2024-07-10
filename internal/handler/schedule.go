@@ -2,8 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"iot_switch/iotSwitchApp/internal/models"
-	"iot_switch/iotSwitchApp/internal/utils"
+	"iot_switch/internal/models"
+	"iot_switch/internal/utils"
 	"net/http"
 	"strconv"
 	"time"

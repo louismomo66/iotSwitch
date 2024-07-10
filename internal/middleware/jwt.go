@@ -56,8 +56,8 @@ package midelware
 
 import (
 	"encoding/json"
-	"iot_switch/iotSwitchApp/internal/config"
-	"iot_switch/iotSwitchApp/internal/utils"
+	"iot_switch/internal/config"
+	"iot_switch/internal/utils"
 	"net/http"
 	"os"
 

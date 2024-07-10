@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"iot_switch/iotSwitchApp/internal/handler"
-	midelware "iot_switch/iotSwitchApp/internal/middleware"
+	"iot_switch/internal/handler"
+	midelware "iot_switch/internal/middleware"
 
 	"github.com/gorilla/mux"
 )

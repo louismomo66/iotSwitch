@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"iot_switch/iotSwitchApp/internal/config"
+	"iot_switch/internal/config"
 	"log"
 	"net/smtp"
 )

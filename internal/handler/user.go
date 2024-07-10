@@ -3,8 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"iot_switch/iotSwitchApp/internal/models"
-	"iot_switch/iotSwitchApp/internal/utils"
+	"iot_switch/internal/models"
+	"iot_switch/internal/utils"
 	"net/http"
 
 	"gorm.io/gorm"

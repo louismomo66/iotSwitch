@@ -1,13 +1,13 @@
 package main
 
 import (
-	"iot_switch/iotSwitchApp/internal/config"
-	"iot_switch/iotSwitchApp/internal/handler"
-	midelware "iot_switch/iotSwitchApp/internal/middleware"
-	"iot_switch/iotSwitchApp/internal/repository"
-	"iot_switch/iotSwitchApp/internal/routes"
-	"iot_switch/iotSwitchApp/internal/service"
-	"iot_switch/iotSwitchApp/internal/utils"
+	"iot_switch/internal/config"
+	"iot_switch/internal/handler"
+	midelware "iot_switch/internal/middleware"
+	"iot_switch/internal/repository"
+	"iot_switch/internal/routes"
+	"iot_switch/internal/service"
+	"iot_switch/internal/utils"
 	"net/http"
 	"os"
 
