@@ -44,7 +44,7 @@ func main() {
 	// Wrap the router with the LoggingMiddleware
 	loggedRouter := midelware.LoggingMiddleware(logger)(r)
 
-	if err := http.ListenAndServe(":9000",
+	if err := http.ListenAndServe(":9001",
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
 			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
