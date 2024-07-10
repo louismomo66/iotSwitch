@@ -11,7 +11,7 @@ import (
 
 func ConnectDB() (*gorm.DB, error) {
 	conf := config.LoadConfig()
-	dbURL := "host=" + conf.DBHost + " user=" + conf.DBUser + " password=" + conf.DBPassword + " dbname=" + conf.DBName + " port=" + conf.DBPort + " sslmode=required"
+	dbURL := "host=" + conf.DBHost + " user=" + conf.DBUser + " password=" + conf.DBPassword + " dbname=" + conf.DBName + " port=" + conf.DBPort + " sslmode=require"
 
 	conn, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dbURL,
