@@ -65,6 +65,7 @@ func TestAuthHandler_SignUp(t *testing.T) {
 			},
 			expectedStatus: http.StatusConflict,
 		},
+	
 	}
 
 	for _, tt := range tests {
