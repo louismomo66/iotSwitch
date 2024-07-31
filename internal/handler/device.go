@@ -241,7 +241,7 @@ func (d *DeviceController) DeleteDevice(w http.ResponseWriter, r *http.Request) 
         }
         return
     }else{
-		log.Printf("Device with ID: %d deleted successfully", esp32ID)
+		log.Printf("Device with ID: %s deleted successfully", esp32ID)
 	}
 	response := map[string]string{
         "message": "Device deleted successfully",
