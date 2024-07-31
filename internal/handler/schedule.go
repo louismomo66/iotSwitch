@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"iot_switch/internal/models"
 	"iot_switch/internal/utils"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -89,6 +90,8 @@ func (h *ScheduleHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request)
 	if err := h.DB.Delete(&models.Schedule{}, scheduleID).Error; err != nil {
 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to delete schedule")
 		return
+	}else{
+		log.Printf("Schedule with ID: %d deleted successfully", scheduleID)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
