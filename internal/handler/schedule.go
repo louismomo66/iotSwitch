@@ -93,8 +93,10 @@ func (h *ScheduleHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request)
 	}else{
 		log.Printf("Schedule with ID: %d deleted successfully", scheduleID)
 	}
-
-	w.WriteHeader(http.StatusNoContent)
+	response := map[string]string{
+        "message": "Schedule deleted successfully",
+    }
+	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *ScheduleHandler) ActivateSchedule(w http.ResponseWriter, r *http.Request) {
