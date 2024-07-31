@@ -240,7 +240,13 @@ func (d *DeviceController) DeleteDevice(w http.ResponseWriter, r *http.Request) 
             utils.WriteJSONError(w, http.StatusInternalServerError, err, "Error deleting device")
         }
         return
+    }else{
+		log.Printf("Device with ID: %d deleted successfully", esp32ID)
+	}
+	response := map[string]string{
+        "message": "Device deleted successfully",
     }
+	utils.WriteJSON(w, http.StatusOK, response)
 
-    w.WriteHeader(http.StatusNoContent)
+    // w.WriteHeader(http.StatusNoContent)
 }
