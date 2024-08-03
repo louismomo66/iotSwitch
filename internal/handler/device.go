@@ -159,12 +159,10 @@ func (h *ScheduleHandler) GetRelayStates(w http.ResponseWriter, r *http.Request)
 	now := time.Now()
 
 	// Initialize all relay states to 'off'
-    // for _, relay := range device.Relays {
-    //     relayStates[relay.Pin] = false
-    // }
     for _, relay := range device.Relays {
-		relayStates[relay.Pin] = (relay.State == "on") // Initialize with the current state from the database
-	}
+        relayStates[relay.Pin] = false
+    }
+    
     // // Update states based on the current state from the database
     // for _, relay := range device.Relays {
     //     if relay.State == "on" {
