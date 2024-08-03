@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"iot_switch/internal/models"
 	"iot_switch/internal/utils"
 	"log"
@@ -24,15 +23,7 @@ func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request)
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
 		return
 	}
-  // Convert StartTime to UTC if it's provided in local time or with a different timezone
-    // This assumes the incoming time is in the server's local timezone. Adjust if different.
-    schedule.StartTime = schedule.StartTime.UTC()
 
-    // Validation: Ensure the StartTime is not in the past
-    if schedule.StartTime.Before(time.Now().UTC()) {
-        utils.WriteJSONError(w, http.StatusBadRequest, errors.New("start time cannot be in the past"), "Start time cannot be in the past")
-        return
-    }
 	// Ensure the relay exists
 	var relay models.Relay
 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
@@ -49,86 +40,39 @@ func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(schedule)
 }
 
-// func (h *ScheduleHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
-// 	vars := mux.Vars(r)
-// 	scheduleID, err := strconv.Atoi(vars["id"])
-// 	if err != nil {
-// 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid schedule ID")
-// 		return
-// 	}
-
-// 	var schedule models.Schedule
-// 	if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
-// 		utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
-// 		return
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&schedule); err != nil {
-// 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
-// 		return
-// 	}
-
-// 	// Ensure the relay exists
-// 	var relay models.Relay
-// 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
-// 		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
-// 		return
-// 	}
-
-// 	if err := h.DB.Save(&schedule).Error; err != nil {
-// 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update schedule")
-// 		return
-// 	}
-
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(schedule)
-// }
 func (h *ScheduleHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    scheduleID, err := strconv.Atoi(vars["id"])
-    if err != nil {
-        utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid schedule ID")
-        return
-    }
+	vars := mux.Vars(r)
+	scheduleID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid schedule ID")
+		return
+	}
 
-    var schedule models.Schedule
-    if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
-        utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
-        return
-    }
+	var schedule models.Schedule
+	if err := h.DB.First(&schedule, scheduleID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Schedule not found")
+		return
+	}
 
-    var update models.Schedule
-    if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-        utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
-        return
-    }
+	if err := json.NewDecoder(r.Body).Decode(&schedule); err != nil {
+		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
+		return
+	}
 
-    // Validate the start time (assume it's provided in UTC or convert it to UTC)
-    if update.StartTime.Before(time.Now().UTC()) {
-        utils.WriteJSONError(w, http.StatusBadRequest, errors.New("start time cannot be in the past"), "Invalid start time")
-        return
-    }
+	// Ensure the relay exists
+	var relay models.Relay
+	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
+		return
+	}
 
-    // Ensure the relay exists
-    var relay models.Relay
-    if err := h.DB.First(&relay, update.RelayID).Error; err != nil {
-        utils.WriteJSONError(w, http.StatusNotFound, err, "Relay not found")
-        return
-    }
+	if err := h.DB.Save(&schedule).Error; err != nil {
+		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update schedule")
+		return
+	}
 
-    // Update the schedule with new data
-    schedule.StartTime = update.StartTime
-    schedule.Duration = update.Duration
-    schedule.RelayID = update.RelayID
-    schedule.Active = update.Active
-
-    if err := h.DB.Save(&schedule).Error; err != nil {
-        utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update schedule")
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(schedule)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(schedule)
 }
 
 func (h *ScheduleHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +98,6 @@ func (h *ScheduleHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request)
     }
 	utils.WriteJSON(w, http.StatusOK, response)
 }
-
 func (h *ScheduleHandler) ActivateSchedule(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
