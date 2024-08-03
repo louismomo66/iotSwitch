@@ -171,23 +171,22 @@ func (h *ScheduleHandler) GetRelayStates(w http.ResponseWriter, r *http.Request)
     }
 
 	// When checking schedules
-for _, schedule := range schedules {
-    if schedule.Active {
-        start := schedule.StartTime
-        end := start.Add(time.Duration(schedule.Duration) * time.Second)
-        log.Printf("Checking schedule: %v, start: %v, end: %v, now: %v", schedule.ID, start, end, now)
-        if now.After(start) && now.Before(end) {
-            for _, relay := range device.Relays {
-                if relay.ID == schedule.RelayID {
-                    relayStates[relay.Pin] = true
-                    log.Printf("Schedule %v activates relay pin %v", schedule.ID, relay.Pin)
-                    break
-                }
-            }
-        }
-    }
-}
-
+    for _, schedule := range schedules {
+		if schedule.Active {
+			start := schedule.StartTime
+			end := start.Add(time.Duration(schedule.Duration) * time.Second)
+			if now.After(start) && now.Before(end) {
+				// Set the pin state to true if the schedule is active
+				// Check if the schedule's relay is in device's relays
+				for _, relay := range device.Relays {
+					if relay.ID == schedule.RelayID {
+						relayStates[relay.Pin] = true
+						break
+					}
+				}
+			}
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(relayStates)
 }
