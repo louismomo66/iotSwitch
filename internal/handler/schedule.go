@@ -23,8 +23,7 @@ func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request)
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
 		return
 	}
- // As StartTime is already a time.Time object, we directly convert it to UTC.
- schedule.StartTime = schedule.StartTime.UTC()
+
 	// Ensure the relay exists
 	var relay models.Relay
 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
