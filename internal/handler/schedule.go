@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"iot_switch/internal/models"
 	"iot_switch/internal/utils"
 	"log"
@@ -24,7 +25,13 @@ func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request)
 		return
 	}
  // As StartTime is already a time.Time object, we directly convert it to UTC.
- schedule.StartTime = schedule.StartTime.UTC()
+ 	schedule.StartTime = schedule.StartTime.UTC()
+
+ // Check if the provided StartTime is in the past
+ 	if schedule.StartTime.Before(time.Now().UTC()) {
+		utils.WriteJSONError(w, http.StatusBadRequest, fmt.Errorf("start time cannot be in the past"), "Start time cannot be in the past")
+		return
+	}
 	// Ensure the relay exists
 	var relay models.Relay
 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
@@ -59,7 +66,15 @@ func (h *ScheduleHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request)
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
 		return
 	}
+// Convert updated StartTime to UTC and check if it's in the past
+updatedStartTime := schedule.StartTime.UTC()
+if updatedStartTime.Before(time.Now().UTC()) {
+	utils.WriteJSONError(w, http.StatusBadRequest, fmt.Errorf("start time cannot be in the past"), "Start time cannot be in the past")
+	return
+}
 
+// Ensure the updated StartTime is properly assigned back if valid
+schedule.StartTime = updatedStartTime
 	// Ensure the relay exists
 	var relay models.Relay
 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
