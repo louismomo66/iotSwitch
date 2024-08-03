@@ -23,15 +23,8 @@ func (h *ScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request)
 		utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
 		return
 	}
- // Parse the StartTime to ensure it's valid and to adjust for timezone
- userTime, err := time.Parse(time.RFC3339, schedule.StartTime.Format(time.RFC3339))
- if err != nil {
-	 utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid start time format")
-	 return
- }
-
- // Convert user provided time to UTC (if server operates in UTC)
- schedule.StartTime = userTime.UTC()
+ // As StartTime is already a time.Time object, we directly convert it to UTC.
+ schedule.StartTime = schedule.StartTime.UTC()
 	// Ensure the relay exists
 	var relay models.Relay
 	if err := h.DB.First(&relay, schedule.RelayID).Error; err != nil {
