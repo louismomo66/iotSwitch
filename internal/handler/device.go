@@ -159,9 +159,9 @@ func (h *ScheduleHandler) GetRelayStates(w http.ResponseWriter, r *http.Request)
 	now := time.Now()
 
 	// Initialize relayStates map with only pins
-	for _, relay := range device.Relays {
-		relayStates[relay.Pin] = false // Initialize all pins as off by default
-	}
+	// for _, relay := range device.Relays {
+	// 	relayStates[relay.Pin] = false // Initialize all pins as off by default
+	// }
 
 	// Update states based on active schedules
 	for _, schedule := range schedules {
