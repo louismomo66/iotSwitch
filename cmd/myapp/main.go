@@ -14,12 +14,17 @@ import (
 	"github.com/go-kit/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
-	
+	err := godotenv.Load()
+	if err != nil {
+		logger.Log("Error loading .env file: %v", err)
+	}
 	cfg := config.LoadConfig()
 	db, err := repository.ConnectDB()
 	if err != nil {
@@ -44,7 +49,7 @@ func main() {
 	// Wrap the router with the LoggingMiddleware
 	loggedRouter := midelware.LoggingMiddleware(logger)(r)
 
-	if err := http.ListenAndServe(":9001",
+	if err := http.ListenAndServe(":9000",
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),
 			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
@@ -54,3 +59,4 @@ func main() {
 			os.Exit(1)
 	}
 }
+// Mukasa9090

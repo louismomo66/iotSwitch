@@ -1,0 +1,14 @@
+version: '3'
+services:
+  postgres:
+    image: 'postgres:14.2'
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: XNEHk9iSGp9GItlxVuXYfmbEiTyugBuZ
+      POSTGRES_DB: iotSwitch
+    ports:
+      - "5434:5432"  # Maps port 5432 inside the container to port 5434 on your host machine
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+
