@@ -1,5 +1,12 @@
-version: '3'
 services:
+  app:
+    build: .
+    ports:
+      - "9000:9000"  # Adjust this as necessary
+    environment:
+      - DSN=host=postgres port=5432 user=postgres password=XNEHk9iSGp9GItlxVuXYfmbEiTyugBuZ dbname=iotSwitch sslmode=disable
+    depends_on:
+      - postgres
   postgres:
     image: 'postgres:14.2'
     restart: always
@@ -11,4 +18,3 @@ services:
       - "5434:5432"  # Maps port 5432 inside the container to port 5434 on your host machine
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
-
