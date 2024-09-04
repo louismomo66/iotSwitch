@@ -28,11 +28,12 @@ func NewDeviceRepository(db *gorm.DB) *GormDeviceRepo {
 	return &GormDeviceRepo{db: db}
 }
 
-func (repo *GormDeviceRepo) GetDevice(id string) (models.Device, error) {
-	var device models.Device
-	err := repo.db.Preload("Relays").Where("esp32_id = ?", id).First(&device).Error
-	return device, err
+func (repo *GormDeviceRepo) GetDevice(esp32ID string) (models.Device, error) {
+    var device models.Device
+    err := repo.db.Preload("Relays").Where("esp32_id = ?", esp32ID).First(&device).Error
+    return device, err
 }
+
 
 func (repo *GormDeviceRepo) CreateDevice(device *models.Device) error {
 	return repo.db.Create(&device).Error
