@@ -18,6 +18,7 @@ type DeviceRepository interface {
 	GetDeviceByESP32ID(esp32ID string) (*models.Device, error)
 	GetRelayByESP32IDAndPin(esp32ID string, pin int) (*models.Relay, error)
 	GetRelayByESP32ID(esp32ID string) (*models.Device, error)
+	GetAllDevicesWithRelays() ([]models.Device, error)
 }
 
 type GormDeviceRepo struct {
@@ -50,7 +51,8 @@ func (repo *GormDeviceRepo) GetAllDevices() ([]models.Device, error) {
 }
 
 func (repo *GormDeviceRepo) DeleteDeviceByESP32ID(esp32ID string) error {
-    return repo.db.Where("esp32_id = ?", esp32ID).Delete(&models.Device{}).Error
+	// Perform a hard delete by using Unscoped() to bypass soft delete
+	return repo.db.Unscoped().Where("esp32_id = ?", esp32ID).Delete(&models.Device{}).Error
 }
 func (repo *GormDeviceRepo) UpdateRelayState(relay *models.Relay) error {
 	return repo.db.Model(&models.Relay{}).Where("id = ?", relay.ID).Update("state", relay.State).Error
@@ -85,4 +87,10 @@ func (repo *GormDeviceRepo) GetRelayByESP32ID(esp32ID string) (*models.Device, e
     var device models.Device
     err := repo.db.Preload("Relays").Where("esp32_id = ?", esp32ID).First(&device).Error
     return &device, err
+}
+func (repo *GormDeviceRepo) GetAllDevicesWithRelays() ([]models.Device, error) {
+	var devices []models.Device
+	// Preload "Relays" to include the associated relays with each device
+	err := repo.db.Preload("Relays").Find(&devices).Error
+	return devices, err
 }

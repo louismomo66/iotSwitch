@@ -22,65 +22,130 @@ func NewDeviceController(repo repository.DeviceRepository) *DeviceController {
 	return &DeviceController{Repo: repo}
 }
 
-func (d *DeviceController) RegisterDevice(w http.ResponseWriter, r *http.Request) {
-	// log.Println("Trying to register")
-	// requestBody, _ := ioutil.ReadAll(r.Body)
-    //     defer r.Body.Close()
-    //     log.Printf("Failed to decode. Request body: %s\n", requestBody)
+// func (d *DeviceController) RegisterDevice(w http.ResponseWriter, r *http.Request) {
+// 	// log.Println("Trying to register")
+// 	// requestBody, _ := ioutil.ReadAll(r.Body)
+//     //     defer r.Body.Close()
+//     //     log.Printf("Failed to decode. Request body: %s\n", requestBody)
 
-    var device models.Device
-    if err := json.NewDecoder(r.Body).Decode(&device); err != nil {
+//     var device models.Device
+//     if err := json.NewDecoder(r.Body).Decode(&device); err != nil {
 		
+//         utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
+//         return
+//     }
+
+//     existingDevice, err := d.Repo.GetDeviceByESP32ID(device.ESP32ID)
+//     if err != nil {
+//         if err.Error() == "record not found" {
+//             if err := d.Repo.CreateDevice(&device); err != nil {
+// 				log.Println("Failed to register")
+//                 utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to register ESP32")
+//                 return
+//             }
+//             w.Header().Set("Content-Type", "application/json")
+//             json.NewEncoder(w).Encode(device)
+//             return
+//         } else {
+// 			log.Println("Table error")
+//             utils.WriteJSONError(w, http.StatusInternalServerError, err, "Device table error")
+//             return
+//         }
+//     }
+
+//     existingDevice.NumRelays = device.NumRelays
+
+//     for _, relay := range device.Relays {
+//         existingRelay, err := d.Repo.GetRelayByESP32IDAndPin(device.ESP32ID, relay.Pin)
+//         if err != nil {
+//             if err.Error() == "record not found" {
+//                 existingDevice.Relays = append(existingDevice.Relays, relay)
+//             } else {
+//                 utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch existing relays")
+//                 return
+//             }
+//         } else {
+//             existingRelay.State = relay.State
+//             if err := d.Repo.UpdateRelayState(existingRelay); err != nil {
+//                 utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay")
+//                 return
+//             }
+//         }
+//     }
+
+//     if err := d.Repo.UpdateDevice(existingDevice); err != nil {
+//         utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update ESP32")
+//         return
+//     }
+
+//     w.Header().Set("Content-Type", "application/json")
+//     json.NewEncoder(w).Encode(existingDevice)
+// }
+func (d *DeviceController) RegisterDevice(w http.ResponseWriter, r *http.Request) {
+    var device models.Device
+
+    // Decode the request body into the device struct
+    if err := json.NewDecoder(r.Body).Decode(&device); err != nil {
         utils.WriteJSONError(w, http.StatusBadRequest, err, "Invalid request payload")
         return
     }
 
+    // Fetch the device from the database using ESP32ID
     existingDevice, err := d.Repo.GetDeviceByESP32ID(device.ESP32ID)
-    if err != nil {
+    if
+    err != nil {
         if err.Error() == "record not found" {
+            // New device, create it
             if err := d.Repo.CreateDevice(&device); err != nil {
-				log.Println("Failed to register")
-                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to register ESP32")
+                log.Println("Failed to register device")
+                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to register device")
                 return
             }
             w.Header().Set("Content-Type", "application/json")
             json.NewEncoder(w).Encode(device)
             return
         } else {
-			log.Println("Table error")
+            log.Println("Error querying the device table")
             utils.WriteJSONError(w, http.StatusInternalServerError, err, "Device table error")
             return
         }
     }
 
-    existingDevice.NumRelays = device.NumRelays
-
-    for _, relay := range device.Relays {
-        existingRelay, err := d.Repo.GetRelayByESP32IDAndPin(device.ESP32ID, relay.Pin)
-        if err != nil {
-            if err.Error() == "record not found" {
-                existingDevice.Relays = append(existingDevice.Relays, relay)
-            } else {
-                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch existing relays")
-                return
-            }
-        } else {
-            existingRelay.State = relay.State
-            if err := d.Repo.UpdateRelayState(existingRelay); err != nil {
-                utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update relay")
-                return
-            }
-        }
+    // Device already exists, check for relay pin conflicts
+    existingRelayMap := make(map[int]models.Relay)
+    for _, existingRelay := range existingDevice.Relays {
+        existingRelayMap[existingRelay.Pin] = existingRelay
     }
 
-    if err := d.Repo.UpdateDevice(existingDevice); err != nil {
-        utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update ESP32")
-        return
+    // Check if the relays from the request already exist in the device
+    for _, relay := range device.Relays {
+        if _, exists := existingRelayMap[relay.Pin]; exists {
+            // If the relay pin already exists, do not update the device
+            log.Printf("Relay with pin %d already exists, no update needed.\n", relay.Pin)
+            continue
+        }
+
+        // If the relay pin is new, add it to the device
+        log.Printf("Adding new relay with pin %d to the existing device.\n", relay.Pin)
+        existingDevice.Relays = append(existingDevice.Relays, relay)
+    }
+
+    // Update the device only if new relays were added
+    if len(existingDevice.Relays) > len(existingRelayMap) {
+        if err := d.Repo.UpdateDevice(existingDevice); err != nil {
+            log.Println("Failed to update device")
+            utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to update device")
+            return
+        }
+    } else {
+        log.Println("No updates were made as no new relays were added.")
     }
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(existingDevice)
 }
+
+
 
 func (d *DeviceController) SetRelayState(w http.ResponseWriter, r *http.Request) {
     var req struct {
@@ -200,18 +265,48 @@ func getRelayIDs(relays []models.Relay) []int {
 	return ids
 }
 
+// func (d *DeviceController) GetAllDevices(w http.ResponseWriter, r *http.Request) {
+// 	devices, err := d.Repo.GetAllDevices()
+// 	if err != nil {
+// 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch devices")
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	json.NewEncoder(w).Encode(devices)
+// }
+
+// func (d *DeviceController) GetAllDevices(w http.ResponseWriter, r *http.Request) {
+// 	// Fetch all devices along with their relays
+// 	devices, err := d.Repo.GetAllDevicesWithRelays()
+// 	if err != nil {
+// 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch devices")
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	json.NewEncoder(w).Encode(devices)
+// }
+
 func (d *DeviceController) GetAllDevices(w http.ResponseWriter, r *http.Request) {
-	devices, err := d.Repo.GetAllDevices()
+	// Fetch all devices along with their relays
+	devices, err := d.Repo.GetAllDevicesWithRelays()
 	if err != nil {
 		utils.WriteJSONError(w, http.StatusInternalServerError, err, "Failed to fetch devices")
 		return
 	}
 
+	// Modify devices to replace the device ID with the first relay's ID
+	for i := range devices {
+		if len(devices[i].Relays) > 0 {
+			// Replace the device ID with the first relay's ID
+			devices[i].ID = uint(devices[i].Relays[0].ID)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(devices)
 }
-
-
 
 
 func (d *DeviceController) GetRelaysByESP32ID(w http.ResponseWriter, r *http.Request) {
